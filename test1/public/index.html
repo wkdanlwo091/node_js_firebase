@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <title>IOT</title>
+
+ <!-- 파이 차트 위한 스타일 -->
+
+  <!-- Custom fonts for this theme -->
+  <link href="css/mine.css" rel="stylesheet">
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/font-awesome.min.css" rel="stylesheet">
+  <link href="css/datepicker3.css" rel="stylesheet">
+  <link href="css/styles.css" rel="stylesheet">
+  <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic" rel="stylesheet"
+    type="text/css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script type="text/javascript"
+    src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.bundle.min.js"></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
+</head>
+
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.6.1/firebase.js"></script>
+
+<!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+<script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-analytics.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-database.js"></script>
+<script type="text/javascript"
+  src="http://newsky2.kma.go.kr/service/SecndSrtpdFrcstInfoService2/ForecastSpaceData?ServiceKey=aL5c%2BUoVd2ChuApYUlC1S5yo4sfKq5FS9Ct2N9TqY5dUWBFUux1vjHP96hjYRRbz9x%2BTQHuYTAUAYIu8O%2ByQ9w%3D%3D&base_date=20200112&base_time=0230&nx=61&ny=125&_type=json"></script>
+
+<script>
+  var today = new Date();
+  var dd = today.getDate();
+  var mm = today.getMonth() + 1; //January is 0!
+  mm = '0' + mm;
+  var yyyy = today.getFullYear();
+  today = mm + '/' + dd + '/' + yyyy;
+  today = yyyy + '' + mm + '' + dd;
+  ///시간 기준으로 데이터베이스 읽기 
+  var t = new Date();
+  console.log("현재 시간은 " + t);
+  var time = t.getHours() + '' + t.getMinutes();
+  if (t.getMinutes(0) < 10) {
+    time = t.getHours() + '0' + t.getMinutes();
+    if (t.getHours(0) < 10) {
+      time = '0' + time;
+    }
+  } else {
+    time = t.getHours() + '' + t.getMinutes();
+    if (t.getHours(0) < 10) {
+      time = '0' + time;
+    }
+  }
+  console.log("현재 시간 " + time + " 현재 날짜 " + today);
+  // Your web app's Firebase configuration  
+  var firebaseConfig = {
+    apiKey: "AIzaSyAvIG1G0xo3Mw-n8AYC-04OEk0pKcTGVMo",
+    authDomain: "test1-e691f.firebaseapp.com",
+    databaseURL: "https://test1-e691f.firebaseio.com",
+    projectId: "test1-e691f",
+    storageBucket: "test1-e691f.appspot.com",
+    messagingSenderId: "130018653709",
+    appId: "1:130018653709:web:0e7847910d63d083648744",
+    measurementId: "G-ED4PVSK91X"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  firebase.analytics();
+  console.log("started");
+
+  var provider = new firebase.auth.GoogleAuthProvider();
+  firebase.auth().signInWithPopup(provider).then(function (result) {
+    // This gives you a Google Access Token. You can use it to access the Google API.
+    var token = result.credential.accessToken;
+    // The signed-in user info.
+    var user = result.user;
+    console.log(token + "    " + user);
+    // ...
+  }).catch(function (error) {
+    // Handle Errors here.
+    var errorCode = error.code;
+    var errorMessage = error.message;
+    // The email of the user's account used.
+    var email = error.email;
+    // The firebase.auth.AuthCredential type that was used.
+    var credential = error.credential;
+    // ...
+  });
+
+  //시각 구해서 디비에 있는 바깥 온도 3시간 마다 
+  //시각 구해서 디비에 있는 안 온도 10분마다 
+  // 
+
+  var base_time = ['0200', '0500', '0800', '1100', '1400', '1700', '2000', '2300']
+  var haha = 100;
+  var my_time = []
+  var smallest = 5000;
+  console.log(time);
+  for (i in base_time) {
+    if (time > base_time[i]) {
+      if (smallest > Math.abs(time - base_time[i])) {
+        smallest = Math.abs(time - base_time[i]);
+        console.log(time - base_time[i] + " " + i + "smallest is" + smallest);
+        smallest_i = i;
+      }
+    }
+  }
+  console.log("가장 작은 시간은 " + smallest_i + "기상청 시간은" + base_time[smallest_i]);
+  //smallest_i 가 현재 시각 기준 
+
+  var db = firebase.firestore();//db 불러오기
+
+  //let addDoc = db.collection('weather').doc(fullDate).collection("time").doc(JSON.stringify(time[0])).set(data);
+  // weather 20200125 time 0230 
+
+  // 현재 시각 불러와서 데이터 가져오기 
+
+  console.log(smallest_i + " 베이스 시간은 " + base_time[smallest_i])
+  weatherDB = db.collection("weather").doc("20200212" + base_time[smallest_i]);
+
+  weatherDB.get().then(function(doc) {
+    if (doc.exists) {
+        console.log("Document data:", doc.data());
+        $('#portfolio > div > div > div:nth-child(1) > div').attr('data-percent', doc.data().tem);
+        $('#portfolio > div > div > div:nth-child(1) > div').html(doc.data().tem);
+        $('.chart').easyPieChart({
+              //your options goes here
+          });
+    } else {
+        // doc.data() will be undefined in this case
+        console.log("No such document!");
+    }
+  }).catch(function(error) {
+      console.log("Error getting document:", error);
+  });
+
+  ///mcu 데이터베이스 가져오기 
+  //
+
+  /*
+  var database = firebase.database();
+
+  database.ref('test/').set({"name": "테스트2", "intro": "인삿말"})
+  function writeUserData(userId, name, email, imageUrl) {
+    firebase.database().ref('users/' + userId).set({
+      username: name,
+      email: email,
+      profile_picture : imageUrl
+    });
+  }
+  writeUserData('james' , 'paul', 'wkdanlwo091@gmail.com', 'haha');
+  */
+</script>
+
+<!-- Theme CSS -->
+
+<link href="css/freelancer.min.css" rel="stylesheet">
+<link  href="css/style.css" rel="stylesheet" type="text/css">
+<style>
+  canvas {
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+  }
+</style>
+</head>
+<!-- <div id="app">{{ message }}</div> -->
+
+<body id="page-top">
+
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg bg-secondary text-uppercase fixed-top" id="mainNav">
+    <div class="container">
+      <a class="navbar-brand js-scroll-trigger" href="#page-top">IOT</a>
+      <div class="collapse navbar-collapse" id="navbarResponsive">
+        <ul class="navbar-nav ml-auto">
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Portfolio Section -->
+  <section class="page-section portfolio" id="portfolio" height="200px !important">
+    <div class="container">
+      <div  class="containers">
+        <div class="box">
+          내부 온도: 
+          <div class="chart" data-percent="5" data-scale-color="#ffb400">50</div>
+        </div>
+        <div class="box">
+          내부 습도:
+          <div class="chart" data-percent="73" data-scale-color="#ffb400">73</div>
+        </div>
+        <div class="box">
+          외부 온도: 
+          <div class="chart" data-percent="-5" data-scale-color="#ffb400">-5</div>
+        </div>
+        <div class="box">
+          외부 습도:
+          <div class="chart" data-percent="60" data-scale-color="#ffb400">60</div>
+        </div>
+      </div>  
+    </div>
+    </section>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.js"></script>
+    <script src="js/jquery.easypiechart.js"></script>
+  
+  <script>
+
+    var REH;
+    var T3H;
+    weatherDB.get().then(function (doc) {
+      console.log(doc);
+      if (doc.exists) {
+        console.log("Document data:", doc.data());
+        REH = doc.data().hum;
+        T3H = doc.data().tem;
+
+      } else {
+        // doc.data() will be undefined in this case
+        console.log("No such document!");
+      }
+    }).catch(function (error) {
+      console.log("Error getting document:", error);
+    });
+  </script>
+
+  <!-- About Section -->
+  <section class="page-section bg-primary text-white mb-0" id="about">
+    <div class="container">
+      <div class="chart-container" style="position: relative; height:200px; width:60vw">
+        <canvas id="myChart"></canvas>
+      </div>
+      <button type="button" id="reData" style="color:black">데이터 변경</button>
+      <button type="button" id="addData" style="color:black">데이터 추가</button>
+      <button type="button" id="addDataSet" style="color:black">데이터셋 추가</button>
+      <button type="button" id="delData" style="color:black">데이터 삭제</button>
+      <button type="button" id="delDataset" style="color:black">데이터셋 삭제</button>
+      <font size="2" style="color:black">날짜 : </font><input type="input" id="startDatepicker" style="color:black">
+      <script>
+        ctx = document.getElementById('myChart');
+        config = {
+          type: 'line',
+          data: {
+            labels: [ // Date Objects
+            ],
+            datasets: [{
+              label: '내부 온도',
+              backgroundColor: 'rgba(75, 192, 192, 1)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              fill: false,
+              data: [
+              ],
+              spanGaps: true
+            }, {
+              label: '외부 온도',
+              backgroundColor: 'rgba(75, 192, 192, 1)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              fill: false,
+              data: [
+              ],
+              spanGaps: true
+            }, {
+              label: '내부 습도',
+              backgroundColor: 'rgba(255, 99, 132, 1)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+              fill: false,
+              data: [
+              ],
+              spanGaps: true
+            }, {
+              label: '외부 습도',
+              backgroundColor: 'rgba(255, 99, 132, 1)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+              fill: false,
+              data: [
+              ],
+              spanGaps: true
+            }]
+          },
+          options: {
+            maintainAspectRatio: false,
+            title: {
+              text: 'Chart.js Time Scale'
+            },
+            scales: {
+              yAxes: [{
+                scaleLabel: {
+                  display: true,
+                  labelString: '차트'
+                }
+              }]
+            },
+          }
+        };
+        var startDate;
+        var endDate;
+        function mySplit(temp) {
+          temp = temp.split('/');
+          return temp[2] + temp[0] + temp[1];
+        }
+        mcu = [];
+        cast = [];//[[hum,tem,time],[hum,tem,time],[hum,tem,time],[hum,tem,time],[hum,tem,time]] 
+        for (i = 0; i < 24; i++) {
+          if (i < 10)
+            config.data.labels.push("0" + i + ":00");
+          else
+            config.data.labels.push(i + ":00");
+        }
+
+        $(function () {
+          $("#startDatepicker").datepicker({
+            showButtonPanel: true,
+            changeMonth: true,
+            changeYear: true,
+            nextText: '다음 달',
+            prevText: '이전 달',
+            dateFormat: "yymmdd"
+          });
+          var al = 0;
+          $("#startDatepicker").change(function () {///////////////
+            if ($("#startDatepicker").val() == '') {
+              return;
+            }
+            al++;
+            var temp = $("#startDatepicker").val();
+            temp = temp.split('/');
+            temp = temp[2] + temp[0] + temp[1]; //선택된 날짜 
+            var exist = 0;
+            window.db.collection("weather").where("date", "==", temp).get().then(function (querySnapshot) {
+              mcu = [];
+
+              querySnapshot.forEach(function (doc) {
+                var mcuIndex = 0;
+                if (doc.data().API == "cast") {//기상청 
+                  cast.push([doc.data().hum, doc.data().tem, doc.data().time]);
+                } else {//기기 
+                  mcu.push([doc.data().hum, doc.data().tem, doc.data().time]);
+                }
+                exist += 1;
+              });
+              if (exist == 0) {
+                $("#startDatepicker").val('');
+                alert("존재하지 않는 데이터 입니다. 날짜 다시 입력해주세요 " + temp);
+              }
+              config.data.datasets[1].data = [];
+              config.data.datasets[3].data = [];
+              for (i = 0; i < 24; i++) {
+                config.data.datasets[1].data.push(NaN);
+                config.data.datasets[3].data.push(NaN);
+                config.data.datasets[0].data.push(NaN);//내부 
+                config.data.datasets[2].data.push(NaN);//내부 
+              }
+              var j = 0;
+              for (i = 0; i < 24; i++) {///기상청 데이터 
+                if ((i + 1) % 3 == 0) { //3 6 9 12 15 18 21 24 // ['0200', '0500', '0800', '1100', '1400', '1700', '2000', '2300']을 넣는다. 
+                  config.data.datasets[1].data[i] = cast[j][1];//외부 온도
+                  config.data.datasets[3].data[i] = cast[j][0]//외부 습도 
+                  j++;
+                }
+              }
+
+              //기기는 시간당 평균 hum, tem 값을 넣는다. 
+              var avgMcutem = [];
+              var avgMcuhum = [];
+              var avgIndexMcu = []
+              // 기기 데이터 시간별로 평균값을 내린다.
+              for (i = 0; i < 24; i++) {
+                avgMcutem.push(0);
+                avgMcuhum.push(0);
+                avgIndexMcu.push(0);
+              }
+              var k = 0;//k는 0 부터 23까지
+              for (i = 0; i < mcu.length; i++) {///기기 데이터
+                if (mcu[i][2][0] == '0') {//00 01 02 
+                  avgMcutem[parseInt(mcu[i][2][1])] += mcu[i][1];
+                  avgMcuhum[parseInt(mcu[i][2][1])] += mcu[i][0];
+                  avgIndexMcu[parseInt(mcu[i][2][1])]++;
+                } else { // ex) 12 13 14 이런 식이면 
+                  avgMcutem[parseInt(mcu[i][2].substring(0, 2))] += mcu[i][1];
+                  avgMcuhum[parseInt(mcu[i][2].substring(0, 2))] += mcu[i][0];
+                  avgIndexMcu[parseInt(mcu[i][2].substring(0, 2))]++;
+                }
+              }
+              for (i = 0; i < avgIndexMcu.length; i++) {
+                if (avgIndexMcu[i] != 0) {
+                  avgMcuhum[i] /= avgIndexMcu[i];
+                  avgMcutem[i] /= avgIndexMcu[i];
+                }
+              }
+              for (i = 0; i < 24; i++) {
+                if (avgIndexMcu[i] != 0) {
+                  config.data.datasets[0].data[i] = avgMcutem[i];//내부 온도
+                  config.data.datasets[2].data[i] = avgMcuhum[i]//내부 습도 
+                }
+              }
+
+
+              console.log(config);
+              myChart.update();	//차트 업데이트
+
+            });
+          });
+        });
+        //파이어베이스 날짜를 더한다. 
+        //파이어베이스 년도 별로 구할 수 있게 한다. 
+        //그래프 기준 점을 어디서 부터 정해야 할까??? 많은 데이터 기준으로 잡아야 할까?
+        //적은 기상청 데이터 기준으로 잡아야 할까 
+        //적은 기상청 데이터 기준으로 잡는다. 없는 부분은 평균을 구한다.
+        /*
+        for(i in mcu){
+          config.data.datasets[0].data.push(i[1]);//내부 온도 
+          config.data.datasets[2].data.push(i[0]);//내부 습도 
+        }*/
+        //차트 그리기
+        var myChart = new Chart(ctx, config);
+        //데이터 변경
+        document.getElementById('reData').onclick = function () {
+          //데이터셋 수 만큼 반복
+          var dataset = config.data.datasets;
+          for (var i = 0; i < dataset.length; i++) {
+            console.log(dataset);
+            //데이터 갯수 만큼 반복
+            var data = dataset[i].data;
+            for (var j = 0; j < data.length; j++) {
+              data[j] = Math.floor(Math.random() * 50);
+            }
+          }
+          myChart.update();	//차트 업데이트
+        }
+        //데이터 추가
+        document.getElementById('addData').onclick = function () {
+          //라벨추가
+          config.data.labels.push('data' + config.data.labels.length)
+          //데이터셋 수 만큼 반복
+          var dataset = config.data.datasets;
+          for (var i = 0; i < dataset.length; i++) {
+            //데이터셋의 데이터 추가
+            dataset[i].data.push(Math.floor(Math.random() * 50));
+          }
+          myChart.update();	//차트 업데이트
+        }
+        //데이터셋 추가
+        document.getElementById('addDataSet').onclick = function () {
+          var color1 = Math.floor(Math.random() * 256);
+          var color2 = Math.floor(Math.random() * 256);
+          var color3 = Math.floor(Math.random() * 256);
+          console.log(color1 + " " + color2 + " " + color3)
+          var newDataset = {
+            label: 'new Dataset' + config.data.datasets.length,
+            borderColor: 'rgba(' + color1 + ', ' + color2 + ', ' + color3 + ', 1)',
+            backgroundColor: 'rgba(' + color1 + ', ' + color2 + ', ' + color3 + ', 1)',
+            data: [],
+            fill: false
+          }
+          // newDataset에 데이터 삽입
+          for (var i = 0; i < config.data.labels.length; i++) {
+            var num = Math.floor(Math.random() * 50);
+            newDataset.data.push(num);
+          }
+          // chart에 newDataset 푸쉬
+          config.data.datasets.push(newDataset);
+          myChart.update();	//차트 업데이트
+        }
+        //데이터 삭제
+        document.getElementById('delData').onclick = function () {
+          config.data.labels.splice(-1, 1);//라벨 삭제
+          //데이터 삭제
+          config.data.datasets.forEach(function (dataset) {
+            dataset.data.pop();
+          });
+          myChart.update();	//차트 업데이트
+        }
+        //데이터셋 삭제
+        document.getElementById('delDataset').onclick = function () {
+          config.data.datasets.splice(-1, 1);
+          myChart.update();	//차트 업데이트
+        }
+      </script>
+    </div>
+  </section>
+
+  <!-- Scroll to Top Button (Only visible on small and extra-small screen sizes) -->
+  <div class="scroll-to-top d-lg-none position-fixed ">
+    <a class="js-scroll-trigger d-block text-center text-white rounded" href="#page-top">
+      <i class="fa fa-chevron-up"></i>
+    </a>
+  </div>
+
+  <!-- Portfolio Modals -->
+
+  <!-- Portfolio Modal 1 -->
+  <div class="portfolio-modal modal fade" id="portfolioModal1" tabindex="-1" role="dialog"
+    aria-labelledby="portfolioModal1Label" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+      <div class="modal-content">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">
+            <i class="fas fa-times"></i>
+          </span>
+        </button>
+        <div class="modal-body text-center">
+          <div class="container">
+            <div class="row justify-content-center">
+              <div class="col-lg-8">
+                <!-- Portfolio Modal - Title -->
+                <h2 class="portfolio-modal-title text-secondary text-uppercase mb-0">Log Cabin</h2>
+                <!-- Icon Divider -->
+                <div class="divider-custom">
+                  <div class="divider-custom-line"></div>
+                  <div class="divider-custom-icon">
+                    <i class="fas fa-star"></i>
+                  </div>
+                  <div class="divider-custom-line"></div>
+                </div>
+                <!-- Portfolio Modal - Image -->
+                <img class="img-fluid rounded mb-5" src="img/portfolio/cabin.png" alt="">
+                <!-- Portfolio Modal - Text -->
+                <p class="mb-5">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Mollitia neque assumenda ipsam
+                  nihil, molestias magnam, recusandae quos quis inventore quisquam velit asperiores, vitae?
+                  Reprehenderit soluta, eos quod consequuntur itaque. Nam.</p>
+                <button class="btn btn-primary" href="#" data-dismiss="modal">
+                  <i class="fas fa-times fa-fw"></i>
+                  Close Window
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Portfolio Modal 2 -->
+  <div class="portfolio-modal modal fade" id="portfolioModal2" tabindex="-1" role="dialog"
+    aria-labelledby="portfolioModal2Label" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+      <div class="modal-content">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">
+            <i class="fas fa-times"></i>
+          </span>
+        </button>
+        <div class="modal-body text-center">
+          <div class="container">
+            <div class="row justify-content-center">
+              <div class="col-lg-8">
+                <!-- Portfolio Modal - Title -->
+                <h2 class="portfolio-modal-title text-secondary text-uppercase mb-0">Tasty Cake</h2>
+                <!-- Icon Divider -->
+                <div class="divider-custom">
+                  <div class="divider-custom-line"></div>
+                  <div class="divider-custom-icon">
+                    <i class="fas fa-star"></i>
+                  </div>
+                  <div class="divider-custom-line"></div>
+                </div>
+                <!-- Portfolio Modal - Image -->
+                <img class="img-fluid rounded mb-5" src="img/portfolio/cake.png" alt="">
+                <!-- Portfolio Modal - Text -->
+                <p class="mb-5">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Mollitia neque assumenda ipsam
+                  nihil, molestias magnam, recusandae quos quis inventore quisquam velit asperiores, vitae?
+                  Reprehenderit soluta, eos quod consequuntur itaque. Nam.</p>
+                <button class="btn btn-primary" href="#" data-dismiss="modal">
+                  <i class="fas fa-times fa-fw"></i>
+                  Close Window
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  </script>
+
+  <!-- Bootstrap core JavaScript -->
+  <!--<script src="vendor/jquery/jquery.min.js"></script>-->
+  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Plugin JavaScript -->
+  <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+
+  <!-- Contact Form JavaScript -->
+  <script src="js/jqBootstrapValidation.js"></script>
+  <script src="js/contact_me.js"></script>
+
+  <!-- Custom scripts for this template -->
+  <script>console.log("두번 째")</script>
+  <script src="js/freelancer.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+  <script async="" src="//www.google-analytics.com/analytics.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <!-- <script src="js/chart.min.js"></script>-->
+  <!--이게 문제네 이것 때문에 중간 차트가 안떴다 -->
+  <!-- <script src="js/chart-data.js"></script>
+  <script src="js/easypiechart.js"></script>
+  <script src="js/easypiechart-data.js"></script> -->
+  <script src="js/bootstrap-datepicker.js"></script>
+  <script src="js/custom.js"></script>
+</body>
+
+</html>
+
+</html>
